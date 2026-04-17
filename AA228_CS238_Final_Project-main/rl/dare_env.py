@@ -115,36 +115,33 @@ class DareEnv(gym.Env):
 
     # ------------------------------------------------------------------
     def _reward(self, v, x_norm, success):
-        # x mapped so that x=0 means completed (x_norm=1), negative means short
-        x = x_norm - 1.0
-
-        if success and abs(v - 1.0) < 0.01 and abs(x) < 0.1:
-            return 10000.0
+        """
+        Fixes three issues identified in the original paper:
+        1. Scale: reduced from ±10000 to ±10 — original caused value loss of 10^8
+        2. Mach component: original f(v) peaked at v≈0 (rewarded low Mach / low fuel);
+           now penalises deviation from v=1.0 (sonic combustor exit) with correct gradient
+        3. x variable: original used x=x_norm-1 which inverted g(x); now x_norm
+           used directly so solver completion (x_norm≈1) gives maximum completion reward
+        """
+        # Hard terminal cases
+        if success and abs(v - 1.0) < 0.05:
+            return 10.0
         if not success and x_norm < 0.1:
-            return -10000.0
+            return -10.0
 
-        def f(v):
-            if 0.99 <= v < 1.01:
-                return 10000 * (0.99 - v) - 890
-            elif 0.9 <= v < 0.99:
-                return 2000 * (0.99 - v) - 1700
-            else:
-                return 11764.706 * (0.99 - v) - 10000
+        # Mach component: penalise deviation from sonic (v=1.0)
+        # Mach_Mixture initialises to 10 in DARE on solver failure — clip to avoid
+        # outsized penalty swamping the completion signal
+        mach_err = min(abs(v - 1.0), 5.0) / 5.0  # normalised to [0, 1]
+        r_mach = -5.0 * mach_err                   # range: (-5, 0]
 
-        def g(x):
-            ax = abs(x)
-            if ax < 0.1:
-                return -9000 * (1 - ax) + 1000
-            elif ax < 0.5:
-                return -250 * (1 - ax) + 125
-            else:
-                return -20000 * (1 - x) + 10000
+        # Completion component: reward how far the solver ran through the engine
+        r_completion = 5.0 * x_norm - 5.0          # range: (-5, 0], 0 at x_norm=1
 
-        return f(v) + g(x)
+        return r_mach + r_completion
 
     def _is_terminal(self, v, x_norm, success):
-        x = x_norm - 1.0
-        target_reached = success and abs(v - 1.0) < 0.01 and abs(x) < 0.1
+        target_reached = success and abs(v - 1.0) < 0.05
         unsafe = not success and x_norm < 0.1
         return target_reached or unsafe
 
