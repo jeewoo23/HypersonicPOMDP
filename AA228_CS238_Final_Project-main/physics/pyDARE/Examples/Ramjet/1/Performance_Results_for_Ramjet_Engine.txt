@@ -1,0 +1,10 @@
+Uninstalled Thrust [N]: 1.616979e+05
+Fuel consumption [kg/s]: 5.611582e-01
+ISP [s]: 2.937312e+04
+TSP [s]: 1.252791e+02
+Air mass flow rate [kg/s]: 1.315699e+02
+Thermal efficiency: 8.230425e-01
+Propulsion efficiency: 2.209589e-01
+Overall efficiency: 1.818586e-01
+Nozzle exit pressure [Pa]: 7.891982e+03
+Nozzle exit area [m^2]: 5.491724e+00

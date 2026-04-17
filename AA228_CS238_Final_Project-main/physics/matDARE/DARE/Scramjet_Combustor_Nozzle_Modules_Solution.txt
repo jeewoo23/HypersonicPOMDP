@@ -1,0 +1,2 @@
+Iteration	Mach	Pressure [Pa]	Velocity [m/s]	Temperature [K]	Density [kg/m^3]	Speed of Sound [m/s]	Y_O2	Y_N2	Y_H2	Y_OH	Y_O	Y_H	Y_H2O	Y_NO	Y_N	Y_HO2	Y_H2O2	Y_HNO	Y_NO2	Mass flow rate [kg/s]	Area [m^2]	Axial location
+0	2.000000	5.949382e+04	1401.75	1311.94	1.564762e-01	700.87	0.208811	0.785529	0.005660	0.000000	0.000000	0.000000	0.000000	0.000000	0.000000	0.000000	0.000000	0.000000	0.000000	877.359576	4.000000	0.000000
