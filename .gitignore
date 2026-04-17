@@ -1,0 +1,13 @@
+# DARE run artifacts
+Intake.mat
+numerical_setup.mat
+*_Solution.txt
+Performance_Results_*.txt
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Trained model checkpoints
+*.zip
