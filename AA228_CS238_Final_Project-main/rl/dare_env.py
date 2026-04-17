@@ -18,13 +18,14 @@ _DARE_DIR = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "..", "physics", "matDARE", "DARE")
 )
 
-# Equivalence ratio bounds
-ER_MIN = 0.05
-ER_MAX = 0.40
+# Equivalence ratio bounds (SCRAM mode: too low = insufficient combustion,
+# too high = thermal choking; paper sweep showed ~0.15-0.25 is viable)
+ER_MIN = 0.10
+ER_MAX = 0.32  # ER>=0.35 causes thermal choking
 
-# Flight envelope
-MACH_RANGE   = (4.0, 6.5)
-ALT_RANGE_KM = (20.0, 30.0)
+# Fixed scramjet design point (Mach 6, 25 km) — matches Scramjet Example 1
+MACH_FLIGHT = 6.0
+ALTITUDE_KM = 25.0
 
 
 class DareEnv(gym.Env):
@@ -82,9 +83,9 @@ class DareEnv(gym.Env):
         self._start_engine()
 
         rng = np.random.default_rng(seed)
-        self._mach_flight = float(rng.uniform(*MACH_RANGE))
-        self._altitude    = float(rng.uniform(*ALT_RANGE_KM))
-        self._er          = float(rng.uniform(0.10, 0.25))
+        self._mach_flight = MACH_FLIGHT
+        self._altitude    = ALTITUDE_KM
+        self._er          = float(rng.uniform(0.15, 0.25))
         self._steps       = 0
 
         pressure, velocity, temperature, _, _, _ = self._run_dare(self._er)
@@ -123,17 +124,20 @@ class DareEnv(gym.Env):
         3. x variable: original used x=x_norm-1 which inverted g(x); now x_norm
            used directly so solver completion (x_norm≈1) gives maximum completion reward
         """
+        # Scramjet nozzle exit Mach is ~1.6-1.7; target band is 1.55-1.75
+        MACH_TARGET = 1.65
+        MACH_TOL    = 0.10
+
         # Hard terminal cases
-        if success and abs(v - 1.0) < 0.05:
+        if success and abs(v - MACH_TARGET) < MACH_TOL:
             return 10.0
         if not success and x_norm < 0.1:
             return -10.0
 
-        # Mach component: penalise deviation from sonic (v=1.0)
-        # Mach_Mixture initialises to 10 in DARE on solver failure — clip to avoid
-        # outsized penalty swamping the completion signal
-        mach_err = min(abs(v - 1.0), 5.0) / 5.0  # normalised to [0, 1]
-        r_mach = -5.0 * mach_err                   # range: (-5, 0]
+        # Mach component: penalise deviation from target nozzle exit Mach
+        # Mach_Mixture=10 (DARE init value) on failure — clip to bound penalty
+        mach_err = min(abs(v - MACH_TARGET), 5.0) / 5.0  # normalised to [0, 1]
+        r_mach = -5.0 * mach_err                           # range: (-5, 0]
 
         # Completion component: reward how far the solver ran through the engine
         r_completion = 5.0 * x_norm - 5.0          # range: (-5, 0], 0 at x_norm=1
@@ -141,7 +145,7 @@ class DareEnv(gym.Env):
         return r_mach + r_completion
 
     def _is_terminal(self, v, x_norm, success):
-        target_reached = success and abs(v - 1.0) < 0.05
+        target_reached = success and abs(v - 1.65) < 0.10
         unsafe = not success and x_norm < 0.1
         return target_reached or unsafe
 
